@@ -2,19 +2,22 @@ var express = require('express');
 var router = express.Router();
 import Database from 'better-sqlite3';
 
-// parse application/json
 const db = new Database('foobar.db', { verbose: console.log });
 
 const createTables = `
   CREATE TABLE IF NOT EXISTS items(
-    id INT NOT NULL PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    description TEXT NOT NULL,
     startingPrice INT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS bids(
-    id INT NOT NULL PRIMARY KEY,
-    itemId INT NOT NULL,
-    name TEXT NOT NULL
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    itemId INTEGER NOT NULL,
+    price INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT NOT NULL
   )
 `;
 
@@ -26,82 +29,40 @@ router.get('/', (req, res) => {
 });
 
 router.post('/additem', (req, res) => {
-  const { name, price } = req.body;
-  if( username === '' || password === '' ){
+  const { name, description, price } = req.body;
+  if( !(name && description && price) ){
     res.status(400).send({
-      message: "Username and password cannot be empty"
+      message: "Item name, description, and price cannot be empty"
     }); 
   } else {
-    const stmnt = db.prepare("INSERT INTO users(name, password, signedIn, lastTime) VALUES(?, ?, ?, ?)")
-    stmnt.run(username, password, 0, Date.now());
-    res.send({msg: `added new user:${username}`});
+    const stmnt = db.prepare("INSERT INTO items(name, description, startingPrice) VALUES(?, ?, ?)");
+    stmnt.run(name, description, price);
+    res.send(`Added new item:${name}`);
   }
 });
 
-router.post('/signin', (req, res) => {
-  const getUser = db.prepare(`SELECT name, signedIn FROM users WHERE password = ?`);
-  const signIn = db.prepare("UPDATE users SET lastTime = ?, signedIn = 1 WHERE password = ?");
-  let user: boolean = getUser.get(req.body.password);
-  if( user['signedIn'] ){
+router.post('/addbid', (req, res) => {
+  const { id, price, name, phone, email } = req.body;
+  if( !(id && price && name && phone && email) ){
     res.status(400).send({
-      message: "User already signed in"
-    });
+      message: "Please enter all fields"
+    }); 
   } else {
-    signIn.run(Date.now(), req.body.password);
-    res.send({msg: `signed in user: ${user['name']}`});
+    const stmnt = db.prepare("INSERT INTO bids(itemId, price, name, phone, email) VALUES(?, ?, ?, ?, ?)");
+    stmnt.run(id, price, name, phone, email);
+    res.send('Added new bid');
   }
 });
 
-router.post('/signout', (req, res) => {
-  const stmnt = db.prepare("SELECT signedIn FROM users WHERE password = ?");
-  const signOut = db.prepare("UPDATE users, signedIn = 0 WHERE password = ?");
-  const addSession = db.prepare("UPDATE users SET password = ?, startTime = ?, endTime = ?");
-  let signedIn: boolean = stmnt.get(req.body.password)['signedIn'];
-  if( signedIn ){
-    signOut.run(req.body.password);
-
-
-
-  } else {
-    res.status(400);
-    res.error("User not signed in")
-  }
-  res.json(signedIn);
-});
-
-router.get('/all', (req, res) => {
-  const stmnt = db.prepare("SELECT * FROM users")
+router.get('/getprices', (req, res) => {
+  const stmnt = db.prepare(`
+    SELECT i.id, i.name, i.description, MAX(b.price) AS price
+    FROM items i
+    LEFT JOIN bids b ON i.id = b.itemId
+    GROUP BY i.id
+  `);
   const users = stmnt.all()
   res.send(users)
 })
-
-router.get('/user/:username', (req, res) => {
-  const stmnt = db.prepare("SELECT * FROM users WHERE name = ?")
-  const { username } = req.params
-  const userData = stmnt.get(username)
-  res.send(userData)
-})
-
-router.get('/delete/:username', (req,res) => {
-  const stmnt = db.prepare("DELETE FROM users WHERE name = ?"), {username} = req.params
-  stmnt.run(username)
-  res.send(`Deleted user: ${username}`)
-})
-router.get('/update/:username', (req,res) => {
-  const sql:string = "UPDATE users SET name = ? WHERE name = ?"
-  const stmnt = db.prepare(sql)
-  stmnt.get()
-  res.send(`Updated user ${req.params.username}`)
-})
-router.get('/update/:password', (req, res, next) => {
-
-})
-
-const isDuplicateUsername = (username) => {
-  const stmnt = db.prepare("SELECT name FROM users"), usernames = stmnt.all()
-  for(let i = 0; i<usernames.length; i++) 
-    if(username === usernames[i]) return true
-  return false
-}
 
 module.exports = router;

@@ -1,0 +1,4 @@
+/node_modules
+/foobar.db
+/.env
+/.vs

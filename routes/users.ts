@@ -56,7 +56,7 @@ router.post('/addbid', (req, res) => {
 
 router.get('/getprices', (req, res) => {
   const stmnt = db.prepare(`
-    SELECT i.id, i.name, i.description, MAX(b.price) AS price
+    SELECT i.id, i.name, i.startingPrice, i.description, MAX(b.price) AS highestBid
     FROM items i
     LEFT JOIN bids b ON i.id = b.itemId
     GROUP BY i.id

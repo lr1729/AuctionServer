@@ -2,8 +2,10 @@ import express from "express";
 import createError from 'http-errors';
 import cors from 'cors';
 
+require('dotenv').config();
+const port = process.env.PORT;
+
 const app = express();
-const port = 8081; // default port to listen
 
 app.use(cors());
 app.options('*', cors());

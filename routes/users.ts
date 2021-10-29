@@ -37,20 +37,37 @@ router.post('/additem', (req, res) => {
   } else {
     const stmnt = db.prepare("INSERT INTO items(name, description, startingPrice) VALUES(?, ?, ?)");
     stmnt.run(name, description, price);
-    res.send(`Added new item:${name}`);
+    res.send(`Added new item: ${name}`);
   }
 });
 
 router.post('/addbid', (req, res) => {
   const { id, price, name, phone, email } = req.body;
   if( !(id && price && name && phone && email) ){
-    res.status(400).send({
-      message: "Please enter all fields"
-    }); 
+    res.status(400).send("Please enter all fields"); 
   } else {
-    const stmnt = db.prepare("INSERT INTO bids(itemId, price, name, phone, email) VALUES(?, ?, ?, ?, ?)");
-    stmnt.run(id, price, name, phone, email);
-    res.send('Added new bid');
+    const getPrice = db.prepare("SELECT MAX(price) AS price FROM bids WHERE itemId = ?");
+    const highestBid = getPrice.get(req.body.id).price;
+    if(price >= highestBid + parseInt(process.env.MIN_INCREASE)){
+      const stmnt = db.prepare("INSERT INTO bids(itemId, price, name, phone, email) VALUES(?, ?, ?, ?, ?)");
+      stmnt.run(id, price, name, phone, email);
+      res.send('Added new bid');
+    } else 
+      res.status(400).send(`Bid must be at least $${process.env.MIN_INCREASE} higher than the current highest bid`)
+  }
+});
+
+router.post('/removebid', (req, res) => {
+  const { id, price, name } = req.body;
+  if( !(id && price && name) ){
+    res.status(400).send("Please enter all fields");
+  } else {
+    const stmnt = db.prepare("DELETE FROM bids WHERE itemId = ? AND price = ? AND name = ?");
+    const response = stmnt.run(id, price, name);
+    if(response.changes === 0)
+      res.status(404).send("No matching bid found.");
+    else
+      res.status(200).send(`Removed ${response.changes} bids.`)
   }
 });
 

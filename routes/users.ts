@@ -9,7 +9,8 @@ const createTables = `
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT NOT NULL,
-    startingPrice INT NOT NULL
+    startingPrice INT NOT NULL,
+    image TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS bids(
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +27,19 @@ db.exec(createTables);
 /* GET users listing. */
 router.get('/', (req, res) => {
   res.send('respond with a resource');
+});
+
+router.post('/additem', (req, res) => {
+  const { name, description, price, image } = req.body;
+  if( !(name && description && price && image) ){
+    res.status(400).send({
+      message: "Item name, description, and price cannot be empty"
+    }); 
+  } else {
+    const stmnt = db.prepare("INSERT INTO items(name, description, startingPrice, image) VALUES(?, ?, ?, ?)");
+    stmnt.run(name, description, price, image);
+    res.send(`Added new item: ${name}`);
+  }
 });
 
 router.post('/additem', (req, res) => {
@@ -73,7 +87,7 @@ router.post('/removebid', (req, res) => {
 
 router.get('/getprices', (req, res) => {
   const stmnt = db.prepare(`
-    SELECT i.id, i.name, i.startingPrice, i.description, MAX(b.price) AS highestBid
+    SELECT i.id, i.name, i.startingPrice, i.image, i.description, MAX(b.price) AS highestBid
     FROM items i
     LEFT JOIN bids b ON i.id = b.itemId
     GROUP BY i.id

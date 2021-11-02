@@ -15,7 +15,7 @@ const createTables = `
   CREATE TABLE IF NOT EXISTS bids(
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     itemId INTEGER NOT NULL,
-    price INTEGER NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
     name TEXT NOT NULL,
     phone TEXT NOT NULL,
     email TEXT NOT NULL

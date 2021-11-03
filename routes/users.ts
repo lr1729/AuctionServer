@@ -33,24 +33,11 @@ router.post('/additem', (req, res) => {
   const { name, description, price, image } = req.body;
   if( !(name && description && price && image) ){
     res.status(400).send({
-      message: "Item name, description, and price cannot be empty"
+      message: "Item name, description, price, or image cannot be empty"
     }); 
   } else {
     const stmnt = db.prepare("INSERT INTO items(name, description, startingPrice, image) VALUES(?, ?, ?, ?)");
     stmnt.run(name, description, price, image);
-    res.send(`Added new item: ${name}`);
-  }
-});
-
-router.post('/additem', (req, res) => {
-  const { name, description, price } = req.body;
-  if( !(name && description && price) ){
-    res.status(400).send({
-      message: "Item name, description, and price cannot be empty"
-    }); 
-  } else {
-    const stmnt = db.prepare("INSERT INTO items(name, description, startingPrice) VALUES(?, ?, ?)");
-    stmnt.run(name, description, price);
     res.send(`Added new item: ${name}`);
   }
 });

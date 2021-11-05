@@ -1,8 +1,9 @@
-var express = require('express');
-var router = express.Router();
+import validate from 'deep-email-validator'
+import express from 'express';
 import Database from 'better-sqlite3';
 
 const db = new Database('foobar.db', { verbose: console.log });
+var router = express.Router();
 
 const createTables = `
   CREATE TABLE IF NOT EXISTS items(
@@ -82,5 +83,20 @@ router.get('/getprices', (req, res) => {
   const users = stmnt.all()
   res.send(users)
 })
+
+router.get('/gethighestbid', (req, res) => {
+  const stmnt = db.prepare(`
+    SELECT b.name, b.price, b.phone, b.email
+    FROM bids b
+    WHERE b.itemId = ?
+    ORDER BY b.price DESC
+    LIMIT 1
+  `);
+  const highestBid = stmnt.get(req.query.id);
+  if(highestBid)
+    res.send(highestBid);
+  else
+    res.status(404).send("No bids found for this item.");
+});
 
 module.exports = router;

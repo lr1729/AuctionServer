@@ -1,9 +1,13 @@
 import validate from 'deep-email-validator'
+import WebSocket from 'ws';
 import express from 'express';
 import Database from 'better-sqlite3';
 
 const db = new Database('foobar.db', { verbose: console.log });
 var router = express.Router();
+
+// Create a websocket that listens on the env port
+const wss = new WebSocket.Server({ port: process.env.WS_PORT }); // Todo: no
 
 const createTables = `
   CREATE TABLE IF NOT EXISTS items(
@@ -53,6 +57,11 @@ router.post('/addbid', (req, res) => {
     if(price >= highestBid + parseInt(process.env.MIN_INCREASE)){
       const stmnt = db.prepare("INSERT INTO bids(itemId, price, name, phone, email) VALUES(?, ?, ?, ?, ?)");
       stmnt.run(id, price, name, phone, email);
+      wss.clients.forEach(function each(client) {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send("New bid added");
+        }
+      });
       res.send('Added new bid');
     } else 
       res.status(400).send(`Bid must be at least $${process.env.MIN_INCREASE} higher than the current highest bid`)
@@ -75,7 +84,7 @@ router.post('/removebid', (req, res) => {
 
 router.get('/getprices', (req, res) => {
   const stmnt = db.prepare(`
-    SELECT i.id, i.name, i.startingPrice, i.image, i.description, MAX(b.price) AS highestBid
+    SELECT i.id, i.name, i.startingPrice, i.image, i.description, MAX(b.price) AS highestBid, b.name AS highestBidder
     FROM items i
     LEFT JOIN bids b ON i.id = b.itemId
     GROUP BY i.id

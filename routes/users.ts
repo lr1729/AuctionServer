@@ -57,28 +57,33 @@ router.post('/addbid', (req, res) => {
     if(price >= highestBid + parseInt(process.env.MIN_INCREASE)){
       const stmnt = db.prepare("INSERT INTO bids(itemId, price, name, phone, email) VALUES(?, ?, ?, ?, ?)");
       stmnt.run(id, price, name, phone, email);
-      wss.clients.forEach(function each(client) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send("New bid added");
-        }
-      });
       res.send('Added new bid');
+      broadcastUpdate();
     } else 
       res.status(400).send(`Bid must be at least $${process.env.MIN_INCREASE} higher than the current highest bid`)
   }
 });
 
+function broadcastUpdate(){
+  wss.clients.forEach(function each(client) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send("New bid added");
+    }
+  });
+}
 router.post('/removebid', (req, res) => {
-  const { id, price, name } = req.body;
-  if( !(id && price && name) ){
+  const { id, price, email } = req.body;
+  if( !(id && price && email) ){
     res.status(400).send("Please enter all fields");
   } else {
-    const stmnt = db.prepare("DELETE FROM bids WHERE itemId = ? AND price = ? AND name = ?");
-    const response = stmnt.run(id, price, name);
+    const stmnt = db.prepare("DELETE FROM bids WHERE itemId = ? AND price = ? AND email = ?");
+    const response = stmnt.run(id, price, email);
     if(response.changes === 0)
       res.status(404).send("No matching bid found.");
-    else
+    else {
       res.status(200).send(`Removed ${response.changes} bids.`)
+      broadcastUpdate();
+    }
   }
 });
 

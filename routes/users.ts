@@ -53,7 +53,9 @@ router.post('/addbid', (req, res) => {
     res.status(400).send("Please enter all fields"); 
   } else {
     const getPrice = db.prepare("SELECT MAX(price) AS price FROM bids WHERE itemId = ?");
-    const highestBid = getPrice.get(req.body.id).price;
+    const getStartingPrice = db.prepare("SELECT startingPrice FROM items WHERE id = ?");
+    const startingPrice = getStartingPrice.get(id).startingPrice;
+    const highestBid = getPrice.get(req.body.id).price || startingPrice;
     if(price >= highestBid + parseInt(process.env.MIN_INCREASE)){
       const stmnt = db.prepare("INSERT INTO bids(itemId, price, name, phone, email) VALUES(?, ?, ?, ?, ?)");
       stmnt.run(id, price, name, phone, email);
